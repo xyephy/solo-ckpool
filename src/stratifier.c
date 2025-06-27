@@ -82,7 +82,7 @@ struct pool_stats {
 	double dsps10080;
 
 	double network_diff;
-	int64_t best_diff;
+	double best_diff;
 };
 
 typedef struct pool_stats pool_stats_t;
@@ -192,7 +192,7 @@ struct worker_instance {
 
 	double best_diff; /* Best share found by this worker */
 	int64_t best_ever; /* Best share ever found by this worker */
-	int mindiff; /* User chosen mindiff */
+	double mindiff; /* User chosen mindiff */
 
 	bool idle;
 	bool notified_idle;
@@ -235,8 +235,8 @@ struct stratum_instance {
 	uint64_t enonce1_64;
 	int session_id;
 
-	int64_t diff; /* Current diff */
-	int64_t old_diff; /* Previous diff */
+	double diff; /* Current diff */
+	double old_diff; /* Previous diff */
 	int64_t diff_change_job_id; /* Last job_id we changed diff */
 
 	int64_t uadiff; /* Shares not yet accounted for in hashmeter */
@@ -286,7 +286,7 @@ struct stratum_instance {
 	time_t last_txns; /* Last time this worker requested txn hashes */
 	time_t disconnected_time; /* Time this instance disconnected */
 
-	int64_t suggest_diff; /* Stratum client suggested diff */
+	double suggest_diff; /* Stratum client suggested diff */
 	double best_diff; /* Best share found by this instance */
 
 	sdata_t *sdata; /* Which sdata this client is bound to */
@@ -3120,10 +3120,10 @@ static void update_diff(ckpool_t *ckp, const char *cmd)
 		return;
 	}
 
-	/* We only really care about integer diffs so clamp the lower limit to
-	 * 1 or it will round down to zero. */
-	if (unlikely(diff < 1))
-		diff = 1;
+	/* Support fractional difficulty values. Set minimum to a very small
+	 * positive value to prevent division by zero. */
+	if (unlikely(diff < 0.000001))
+		diff = 0.000001;
 
 	dsdata = proxy->sdata;
 
@@ -6892,7 +6892,7 @@ static void parse_remote_share(ckpool_t *ckp, sdata_t *sdata, json_t *val, const
 		LOGWARNING("Failed to get workername from remote message %s", buf);
 		return;
 	}
-	if (unlikely(!json_get_double(&diff, val, "diff") || diff < 1)) {
+	if (unlikely(!json_get_double(&diff, val, "diff") || diff < 0.000001)) {
 		LOGWARNING("Unable to parse valid diff from remote message %s", buf);
 		return;
 	}
@@ -8375,7 +8375,7 @@ static void read_poolstats(ckpool_t *ckp, int *tvsec_diff)
 	json_get_double(&stats->sps60, val, "SPS1h");
 	json_get_int64(&stats->accounted_diff_shares, val, "accepted");
 	json_get_int64(&stats->accounted_rejects, val, "rejected");
-	json_get_int64(&stats->best_diff, val, "bestshare");
+	json_get_double(&stats->best_diff, val, "bestshare");
 	json_decref(val);
 
 	LOGINFO("Successfully read pool sps: %s", sps);
