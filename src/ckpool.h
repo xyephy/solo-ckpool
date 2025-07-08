@@ -235,6 +235,7 @@ struct ckpool_instance {
 	double startdiff; // Default 42.0 (supports fractional values)
 	double highdiff; // Default 1000000.0 (supports fractional values)
 	double maxdiff; // No default (supports fractional values)
+	double shares_per_minute; // Target shares per minute (default 18.0)
 
 	/* Coinbase data */
 	char *btcaddress; // Address to mine to
