@@ -8157,6 +8157,7 @@ static void *statsupdate(void *arg)
 				"Disconnected", stats->disconnected);
 		s = json_dumps(val, JSON_NO_UTF8 | JSON_PRESERVE_ORDER);
 		json_decref(val);
+		val = NULL;
 		LOGNOTICE("Pool:%s", s);
 		fprintf(fp, "%s\n", s);
 		dealloc(s);
@@ -8171,6 +8172,7 @@ static void *statsupdate(void *arg)
 				"hashrate7d", suffix10080);
 		s = json_dumps(val, JSON_NO_UTF8 | JSON_PRESERVE_ORDER);
 		json_decref(val);
+		val = NULL;
 		LOGNOTICE("Pool:%s", s);
 		fprintf(fp, "%s\n", s);
 		dealloc(s);
@@ -8188,6 +8190,7 @@ static void *statsupdate(void *arg)
 				"SPS1h", stats->sps60);
 		s = json_dumps(val, JSON_NO_UTF8 | JSON_PRESERVE_ORDER | JSON_REAL_PRECISION(3));
 		json_decref(val);
+		val = NULL;
 		LOGNOTICE("Pool:%s", s);
 		fprintf(fp, "%s\n", s);
 		dealloc(s);
@@ -8205,6 +8208,7 @@ static void *statsupdate(void *arg)
 
 			s = json_dumps(val, JSON_NO_UTF8 | JSON_PRESERVE_ORDER);
 			json_decref(val);
+			val = NULL;
 			LOGNOTICE("Proxy:%s", s);
 			dealloc(s);
 
@@ -8217,6 +8221,7 @@ static void *statsupdate(void *arg)
 					   "alive", !proxy->dead);
 				s = json_dumps(val, JSON_NO_UTF8 | JSON_PRESERVE_ORDER);
 				json_decref(val);
+				val = NULL;
 				ASPRINTF(&sp, "Proxies:%s", s);
 				dealloc(s);
 				add_msg_entry(&char_list, &sp);
@@ -8231,6 +8236,7 @@ static void *statsupdate(void *arg)
 						   "alive", !subproxy->dead);
 					s = json_dumps(val, JSON_NO_UTF8 | JSON_PRESERVE_ORDER);
 					json_decref(val);
+					val = NULL;
 					ASPRINTF(&sp, "Subproxies:%s", s);
 					dealloc(s);
 					add_msg_entry(&char_list, &sp);
