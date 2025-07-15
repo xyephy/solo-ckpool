@@ -1471,6 +1471,9 @@ static void parse_config(ckpool_t *ckp)
 	json_get_double(&ckp->highdiff, json_conf, "highdiff");
 	json_get_double(&ckp->maxdiff, json_conf, "maxdiff");
 	json_get_double(&ckp->shares_per_minute, json_conf, "shares_per_minute");
+	
+	LOGNOTICE("Difficulty configuration: mindiff=%.2f startdiff=%.2f maxdiff=%.2f shares_per_minute=%.2f",
+		  ckp->mindiff, ckp->startdiff, ckp->maxdiff, ckp->shares_per_minute);
 	json_get_string(&ckp->logdir, json_conf, "logdir");
 	json_get_int(&ckp->maxclients, json_conf, "maxclients");
 	json_get_double(&ckp->donation, json_conf, "donation");

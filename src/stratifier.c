@@ -5685,9 +5685,16 @@ static void add_submit(ckpool_t *ckp, stratum_instance_t *client, const double d
 	if (mindiff) {
 		if (drr < 0.5)
 			return;
-		optimal = lround(dsps * 60.0 / ckp->shares_per_minute * 0.8);
-	} else
-		optimal = lround(dsps * 60.0 / ckp->shares_per_minute);
+		if (ckp->shares_per_minute > 0)
+			optimal = lround(dsps * 60.0 / ckp->shares_per_minute * 0.8);
+		else
+			optimal = lround(dsps * 2.4); /* fallback */
+	} else {
+		if (ckp->shares_per_minute > 0)
+			optimal = lround(dsps * 60.0 / ckp->shares_per_minute);
+		else
+			optimal = lround(dsps * 3.33); /* fallback */
+	}
 
 	/* Clamp to mindiff ~ network_diff */
 
@@ -7923,6 +7930,15 @@ static void *statsupdate(void *arg)
 			per_tdiff, percent;
 		char suffix1[16], suffix5[16], suffix15[16], suffix60[16], cdfield[64];
 		char suffix360[16], suffix1440[16], suffix10080[16];
+		
+		/* Initialize all suffix buffers to prevent invalid UTF-8 */
+		memset(suffix1, 0, sizeof(suffix1));
+		memset(suffix5, 0, sizeof(suffix5));
+		memset(suffix15, 0, sizeof(suffix15));
+		memset(suffix60, 0, sizeof(suffix60));
+		memset(suffix360, 0, sizeof(suffix360));
+		memset(suffix1440, 0, sizeof(suffix1440));
+		memset(suffix10080, 0, sizeof(suffix10080));
 		int remote_users = 0, remote_workers = 0, idle_workers = 0;
 		log_entry_t *log_entries = NULL;
 		char_entry_t *char_list = NULL;
