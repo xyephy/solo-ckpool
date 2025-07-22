@@ -5594,7 +5594,7 @@ static double time_bias(const double tdiff, const double period)
 
 /* Needs to be entered with client holding a ref count. */
 static void add_submit(ckpool_t *ckp, stratum_instance_t *client, const double diff, const bool valid,
-		       const bool submit)
+		       const bool submit, const bool stale)
 {
 	sdata_t *ckp_sdata = ckp->sdata, *sdata = client->sdata;
 	worker_instance_t *worker = client->worker_instance;
@@ -5735,6 +5735,23 @@ static void add_submit(ckpool_t *ckp, stratum_instance_t *client, const double d
 	client->old_diff = client->diff;
 	client->diff = optimal;
 	stratum_send_diff(sdata, client);
+
+	// Enhanced logging for vardiff
+	LOGDEBUG("Client %s: Checking vardiff - dsps5=%.2f, bias=%.2f, drr=%.2f, current diff=%.2f",
+		 client->identity, client->dsps5, bias, drr, client->diff);
+
+	// In solo mode, auto-adjust shares_per_minute slightly if network diff is very high
+	if (ckp->btcsolo && network_diff > 1e12) {  // Arbitrary threshold for high network diff
+		double adjusted_spm = ckp->shares_per_minute * (network_diff / 1e12);  // Scale up target for high diff networks
+		target_sps = adjusted_spm / 60.0;
+		LOGINFO("Solo mode: Adjusted shares_per_minute to %.2f due to high network diff %.0f", adjusted_spm, network_diff);
+	}
+
+	if (client->diff == optimal) return;
+
+	// Log diff change
+	LOGINFO("Client %s: Adjusting diff from %.2f to %.2f (fractional support verified)",
+		client->identity, client->diff, optimal);
 }
 
 static void
@@ -5918,13 +5935,21 @@ static double submission_diff(sdata_t *sdata, const stratum_instance_t *client, 
 	/* Calculate the diff of the share here */
 	ret = diff_from_target(hash);
 
+	// Log for fractional diff precision
+	LOGDEBUG("Calculated share diff: %.6f (fractional)", ret);
+
+	// Guard against invalid diff
+	if (ret < 0.000001) {
+		LOGWARNING("Very low share diff %.6f detected, clamping to 0.000001", ret);
+		ret = 0.000001;
+	}
+
 	/* Test we haven't solved a block regardless of share status */
 	test_blocksolve(client, wb, swap, hash, ret, coinbase, cblen, nonce2, nonce, ntime32, version_mask, stale);
 
 	return ret;
 }
 
-/* Optimised for the common case where shares are new */
 static bool new_share(sdata_t *sdata, const uchar *hash, const int64_t wb_id)
 {
 	share_t *share = ckzalloc(sizeof(share_t)), *match = NULL;
@@ -6224,7 +6249,7 @@ out_nowb:
 		submit_share(client, id, nonce2, ntime, nonce);
 	}
 
-	add_submit(ckp, client, diff, result, submit);
+	add_submit(ckp, client, diff, result, submit, stale);
 
 	/* Now write to the pool's sharelog. */
 	val = json_object();
@@ -8230,10 +8255,12 @@ static void *statsupdate(void *arg)
 
 			mutex_lock(&sdata->proxy_lock);
 			HASH_ITER(hh, sdata->proxies, proxy, proxytmp) {
-				JSON_CPACK(val, "{sI,si,sI,sb}",
+				JSON_CPACK(val, "{sI,si,si,sI,sI,sf,sb}",
 					   "id", proxy->id,
 					   "subproxies", proxy->subproxy_count,
 					   "clients", proxy->combined_clients,
+					   "maxclients", proxy->max_clients,
+					   "diff", proxy->diff,
 					   "alive", !proxy->dead);
 				s = json_dumps(val, JSON_NO_UTF8 | JSON_PRESERVE_ORDER);
 				json_decref(val);

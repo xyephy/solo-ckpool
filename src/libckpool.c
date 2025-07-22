@@ -2165,11 +2165,9 @@ double be256todouble(const uchar *target)
 /* Return a difficulty from a binary target */
 double diff_from_target(uchar *target)
 {
-	double dcut64;
-
-	dcut64 = le256todouble(target);
-	if (unlikely(dcut64 <= 0))
-		dcut64 = 1;
+	double dcut64 = le256todouble(target);
+	if (unlikely(dcut64 &lt;= 0)) dcut64 = 1;
+	if (dcut64 &gt; 1e18) LOGWARNING("Extreme target value detected, potential precision loss");
 	return truediffone / dcut64;
 }
 
